@@ -25,6 +25,8 @@ export class MailerService {
         attachments: formattedAttachments,
       });
 
+      console.log('Attachments:', formattedAttachments);
+
       return { message: 'Email sent successfully' };
     } catch (error) {
       console.error('MailerService Error:', error);
