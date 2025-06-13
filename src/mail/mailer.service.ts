@@ -1,6 +1,6 @@
+// src/mail/mailer.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { MailerService as NestMailerService } from '@nestjs-modules/mailer';
-import { Express } from 'express';
 
 @Injectable()
 export class MailerService {
@@ -9,28 +9,28 @@ export class MailerService {
   async sendMailWithAttachments(
     to: string,
     subject: string,
-    message: string,
-    attachments?: Express.Multer.File[],
+    html: string,
+    attachments: Express.Multer.File[],
   ) {
     try {
-      const formattedAttachments = (attachments || []).map((file) => ({
+      const formattedAttachments = attachments.map((file) => ({
         filename: file.originalname,
-        path: file.path, // full path where multer stores file
+        path: file.path,
+        contentType: file.mimetype,
       }));
 
       await this.mailerService.sendMail({
         to,
         subject,
-        text: message,
+        html,
         attachments: formattedAttachments,
       });
 
-      console.log('Attachments:', formattedAttachments);
-
       return { message: 'Email sent successfully' };
-    } catch (error) {
-      console.error('MailerService Error:', error);
+    } catch {
       throw new InternalServerErrorException('Failed to send email');
+      // console.log('Sending email to:', to);
+      // console.log('Attachments:', attachments);
     }
   }
 }

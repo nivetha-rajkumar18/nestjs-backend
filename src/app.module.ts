@@ -13,6 +13,8 @@ import { MailerService } from './mail/mailer.service';
 import { MailerController } from './mail/mailer.controller';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
+import { JobsModule } from './jobs/jobs.module';
+// import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { ConfigModule } from '@nestjs/config';
     UsersModule,
     ProductModule,
     CustomMailerModule,
+    JobsModule
   ],
   controllers: [MailerController],
   providers: [MailerService],

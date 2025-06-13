@@ -56,8 +56,8 @@ describe('PostController', () => {
   });
 
   describe('findConsole', () => {
-    it('should return console log response', () => {
-      const result = controller.findConsole();
+    it('should return console log response',async () => {
+      const result = await controller.findConsole();
       expect(result).toBe('Console logged');
       expect(mockPostService.consoleLog).toHaveBeenCalled();
     });
