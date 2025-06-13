@@ -16,8 +16,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors();
 
-  await app.listen(3055);
-  console.log(` Server running at http://localhost:3055`);
-  console.log(`email sent successfully`);
+  await app.listen(3020);
+  console.log(` Server running at http://localhost:3020`);
 }
 bootstrap();

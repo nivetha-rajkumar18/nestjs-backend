@@ -2,18 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MailerController } from './mailer.controller';
 import { MailerService } from './mailer.service';
 import { InternalServerErrorException } from '@nestjs/common';
+import { Readable } from 'stream';
 
 describe('MailerController', () => {
   let controller: MailerController;
-  let mockMailerService: {
-    sendMailWithAttachments: jest.Mock;
+  // Removed unused variable mailerService
+
+  const mockMailerService = {
+    sendMailWithAttachments: jest.fn(),
   };
 
   beforeEach(async () => {
-    mockMailerService = {
-      sendMailWithAttachments: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MailerController],
       providers: [
@@ -25,96 +24,65 @@ describe('MailerController', () => {
     }).compile();
 
     controller = module.get<MailerController>(MailerController);
+    // Removed unused variable mailerService
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('should send mail with attachments successfully', async () => {
+  describe('sendMail()', () => {
     const body = {
       to: 'test@example.com',
       subject: 'Hello',
-      message: 'This is a test email',
+      message: '<b>Test email</b>',
     };
 
-    const files: Array<{
-      originalname: string;
-      buffer: Buffer;
-      mimetype: string;
-      size: number;
-      fieldname: string;
-      encoding: string;
-      destination: string;
-      filename: string;
-      path: string;
-      stream: any;
-    }> = [
+    const files: Express.Multer.File[] = [
       {
-        originalname: 'test.txt',
-        buffer: Buffer.from('Hello world'),
-        mimetype: 'text/plain',
-        size: 1024,
-        fieldname: 'attachments',
+        originalname: 'test.pdf',
+        filename: 'abc123.pdf',
+        path: './uploads/mails/abc123.pdf',
+        fieldname: 'file',
         encoding: '7bit',
-        destination: '',
-        filename: '',
-        path: '',
-        stream: null,
+        mimetype: 'application/pdf',
+        stream: new Readable({ read() {} }), // Mock stream with safe construction
+        destination: './uploads/mails',
+        buffer: Buffer.from('mock data'), // Mock buffer
+        size: 1024, // Mock size
       },
     ];
 
-    mockMailerService.sendMailWithAttachments.mockResolvedValueOnce(
-      'Mock result',
-    );
+    it('should send email with attachments', async () => {
+      const expectedResult = { message: 'Email sent successfully' };
+      mockMailerService.sendMailWithAttachments.mockResolvedValue(
+        expectedResult,
+      );
 
-    const result = await controller.sendMailwithAttachments(
-      body.to,
-      body.subject,
-      body.message,
-      files,
-    );
+      const result = await controller.sendMailwithAttachments(body, files);
 
-    expect(result).toEqual({
-      message: 'Email sent successfully',
-      result: 'Mock result',
-    });
-
-    expect(mockMailerService.sendMailWithAttachments).toHaveBeenCalledWith(
-      body.to,
-      body.subject,
-      body.message,
-      files,
-    );
-  });
-
-  it('should throw InternalServerErrorException on failure', async () => {
-    const body = {
-      to: 'fail@example.com',
-      subject: 'Fail',
-      message: 'This should fail',
-    };
-
-    const files = [];
-
-    mockMailerService.sendMailWithAttachments.mockRejectedValueOnce(
-      new Error('Mock failure'),
-    );
-
-    await expect(
-      controller.sendMailwithAttachments(
+      expect(result).toEqual(expectedResult);
+      expect(mockMailerService.sendMailWithAttachments).toHaveBeenCalledWith(
         body.to,
         body.subject,
         body.message,
-        files,
-      ),
-    ).rejects.toThrow(InternalServerErrorException);
+        expect.arrayContaining([
+          expect.objectContaining({
+            filename: 'test.pdf',
+            path: expect.stringContaining('abc123.pdf') as string,
+          }),
+        ]),
+      );
+    });
 
-    expect(mockMailerService.sendMailWithAttachments).toHaveBeenCalledWith(
-      body.to,
-      body.subject,
-      body.message,
-      files,
-    );
+    it('should throw InternalServerErrorException on failure', async () => {
+      mockMailerService.sendMailWithAttachments.mockRejectedValue(
+        new Error('SMTP error'),
+      );
+
+      await expect(
+        controller.sendMailwithAttachments(body, files),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
   });
 });

@@ -1,43 +1,60 @@
+// src/mail/mailer.controller.ts
 import {
   Controller,
   Post,
   Body,
   UploadedFiles,
   UseInterceptors,
+  InternalServerErrorException,
 } from '@nestjs/common';
-import { MailerService } from './mailer.service';
+import { MailerService } from '../mail/mailer.service';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 @Controller('mail')
 export class MailerController {
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(private readonly mailService: MailerService) {
+    if (
+      !mailService ||
+      typeof mailService.sendMailWithAttachments !== 'function'
+    ) {
+      throw new Error(
+        'MailerService is not properly initialized or missing required method',
+      );
+    }
+  }
 
   @Post('send')
   @UseInterceptors(
     AnyFilesInterceptor({
       storage: diskStorage({
-        destination: './uploads',
+        destination: './uploads/mail',
         filename: (req, file, cb) => {
-          const uniqueName = `${uuidv4()}${extname(file.originalname)}`;
-          cb(null, uniqueName);
+          const uniqueSuffix = uuidv4();
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
         },
       }),
     }),
   )
   async sendMailwithAttachments(
-    @Body('to') to: string,
-    @Body('subject') subject: string,
-    @Body('message') message: string,
+    @Body() body: { to: string; subject: string; message: string },
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    return this.mailerService.sendMailWithAttachments(
-      to,
-      subject,
-      message,
-      files,
-    );
+    try {
+      const result = await this.mailService.sendMailWithAttachments(
+        body.to,
+        body.subject,
+        body.message,
+        files,
+      );
+      return result;
+    } catch (error) {
+      console.error('MailerController Error:', error);
+      throw new InternalServerErrorException('Failed to send email');
+      // console.log('attachments', files);
+    }
   }
 }
